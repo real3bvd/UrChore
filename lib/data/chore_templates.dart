@@ -1,0 +1,67 @@
+class ChoreTemplates {
+  static const Map<String, List<String>> byCategory = {
+    'Kitchen': [
+      'Wash the dishes',
+      'Clean the stovetop',
+      'Wipe down counters',
+      'Empty the bin',
+      'Clean the microwave',
+      'Mop the kitchen floor',
+      'Restock pantry',
+      'Clean the fridge',
+    ],
+    'Bathroom': [
+      'Scrub the toilet',
+      'Clean the sink',
+      'Wipe mirrors',
+      'Replace towels',
+      'Scrub the shower',
+      'Empty bathroom bin',
+      'Refill soap dispenser',
+    ],
+    'Bedroom': [
+      'Make the bed',
+      'Change bed sheets',
+      'Vacuum the floor',
+      'Dust surfaces',
+      'Tidy wardrobe',
+      'Open windows to air out',
+    ],
+    'Living Room': [
+      'Vacuum the carpet',
+      'Dust shelves',
+      'Wipe TV screen',
+      'Tidy cushions',
+      'Clean windows',
+      'Water the plants',
+    ],
+    'Garden': [
+      'Mow the lawn',
+      'Water the plants',
+      'Pull weeds',
+      'Sweep the path',
+      'Trim hedges',
+      'Rake leaves',
+    ],
+    'Laundry': [
+      'Do a wash load',
+      'Hang laundry to dry',
+      'Fold and put away clothes',
+      'Iron clothes',
+      'Clean the washing machine',
+    ],
+    'Garage': [
+      'Sweep the garage floor',
+      'Organise tools',
+      'Take out recycling',
+      'Check car oil',
+    ],
+    'General': [
+      'Take out the bins',
+      'Vacuum hallway',
+      'Wipe light switches',
+      'Clean front door',
+      'Check smoke alarms',
+    ],
+  };
+}
