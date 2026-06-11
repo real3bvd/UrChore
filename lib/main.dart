@@ -11,6 +11,9 @@ import 'ui/screens/welcome_screen.dart';
 import 'ui/widgets/hedgehog_painter.dart';
 import 'domain/auth_service.dart';
 import 'ui/theme/theme_service.dart';
+import 'ui/controllers/chores_controller.dart';
+import 'ui/controllers/home_controller.dart';
+import 'ui/controllers/members_controller.dart';
 
 // Conditional import: picks the right DB init for web vs native
 import 'data/database/db_init_stub.dart'
@@ -112,12 +115,25 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   int _currentIndex = 0;
 
-  final GlobalKey<_HomeScreenWrapperState> _homeKey =
-      GlobalKey<_HomeScreenWrapperState>();
-  final GlobalKey<ChoresScreenState> _choresKey =
-      GlobalKey<ChoresScreenState>();
-  final GlobalKey<MembersScreenState> _membersKey =
-      GlobalKey<MembersScreenState>();
+  late final HomeController _homeController;
+  late final ChoresController _choresController;
+  late final MembersController _membersController;
+
+  @override
+  void initState() {
+    super.initState();
+    _homeController = HomeController();
+    _choresController = ChoresController();
+    _membersController = MembersController();
+  }
+
+  @override
+  void dispose() {
+    _homeController.dispose();
+    _choresController.dispose();
+    _membersController.dispose();
+    super.dispose();
+  }
 
   void _switchToChores() {
     setState(() => _currentIndex = 1);
@@ -129,12 +145,12 @@ class _MainShellState extends State<MainShell> {
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          _HomeScreenWrapper(
-            key: _homeKey,
+          HomeScreen(
+            controller: _homeController,
             onNavigateToChores: _switchToChores,
           ),
-          ChoresScreen(key: _choresKey),
-          MembersScreen(key: _membersKey),
+          ChoresScreen(controller: _choresController),
+          MembersScreen(controller: _membersController),
           SettingsScreen(onAuthChanged: widget.onAuthChanged),
         ],
       ),
@@ -151,13 +167,12 @@ class _MainShellState extends State<MainShell> {
           currentIndex: _currentIndex,
           onTap: (i) {
             setState(() => _currentIndex = i);
-            // Reload data when switching tabs
             if (i == 0) {
-              _homeKey.currentState?._loadData();
+              _homeController.loadData();
             } else if (i == 1) {
-              _choresKey.currentState?.loadData();
+              _choresController.loadData();
             } else if (i == 2) {
-              _membersKey.currentState?.loadMembers();
+              _membersController.loadMembers();
             }
           },
           type: BottomNavigationBarType.fixed,
@@ -191,31 +206,6 @@ class _MainShellState extends State<MainShell> {
           ],
         ),
       ),
-    );
-  }
-}
-
-// Wrapper to expose HomeScreen's reload method to the shell
-class _HomeScreenWrapper extends StatefulWidget {
-  final VoidCallback? onNavigateToChores;
-
-  const _HomeScreenWrapper({super.key, this.onNavigateToChores});
-
-  @override
-  State<_HomeScreenWrapper> createState() => _HomeScreenWrapperState();
-}
-
-class _HomeScreenWrapperState extends State<_HomeScreenWrapper> {
-  void _loadData() {
-    // Trigger rebuild by setting state
-    setState(() {});
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return HomeScreen(
-      key: ValueKey(DateTime.now().millisecondsSinceEpoch),
-      onNavigateToChores: widget.onNavigateToChores,
     );
   }
 }

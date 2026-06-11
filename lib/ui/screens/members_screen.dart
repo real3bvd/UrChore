@@ -4,20 +4,21 @@ import '../widgets/hedgehog_painter.dart';
 import '../widgets/member_avatar.dart';
 import '../widgets/app_notification.dart';
 import '../../data/models/member.dart';
-import '../../domain/member_service.dart';
 import '../../domain/auth_service.dart';
+import '../controllers/members_controller.dart';
 
 class MembersScreen extends StatefulWidget {
-  const MembersScreen({super.key});
+  final MembersController? controller;
+
+  const MembersScreen({super.key, this.controller});
 
   @override
-  State<MembersScreen> createState() => MembersScreenState();
+  State<MembersScreen> createState() => _MembersScreenState();
 }
 
-class MembersScreenState extends State<MembersScreen> {
-  final MemberService _memberService = MemberService();
-  List<Member> _members = [];
-  Map<int, int> _choreCounts = {};
+class _MembersScreenState extends State<MembersScreen> {
+  late final MembersController _controller;
+  late final bool _ownsController;
 
   static const List<String> _colorOptions = [
     '5C8B6E',
@@ -31,21 +32,15 @@ class MembersScreenState extends State<MembersScreen> {
   @override
   void initState() {
     super.initState();
-    loadMembers();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? MembersController();
+    _controller.loadMembers();
   }
 
-  Future<void> loadMembers() async {
-    final members = await _memberService.getAllMembers();
-    final counts = <int, int>{};
-    for (final member in members) {
-      counts[member.id!] = await _memberService.getTotalChoreCount(member.id!);
-    }
-    if (mounted) {
-      setState(() {
-        _members = members;
-        _choreCounts = counts;
-      });
-    }
+  @override
+  void dispose() {
+    if (_ownsController) _controller.dispose();
+    super.dispose();
   }
 
   Future<void> _showAddMemberSheet() async {
@@ -146,9 +141,7 @@ class MembersScreenState extends State<MembersScreen> {
                                 );
 
                                 try {
-                                  await _memberService
-                                      .addMember(member)
-                                      .timeout(const Duration(seconds: 10));
+                                  await _controller.addMember(member);
                                   if (context.mounted) {
                                     Navigator.pop(context, true);
                                   }
@@ -181,13 +174,11 @@ class MembersScreenState extends State<MembersScreen> {
         );
       },
     );
-    if (didAdd == true) {
-      await loadMembers();
-    }
+    if (didAdd == true) return;
   }
 
   Future<void> _deleteMember(Member member) async {
-    final activeCount = await _memberService.getActiveChoreCount(member.id!);
+    final activeCount = await _controller.getActiveChoreCount(member.id!);
     if (!mounted) return;
 
     String body = 'Are you sure you want to remove ${member.name}?';
@@ -223,99 +214,100 @@ class MembersScreenState extends State<MembersScreen> {
     );
 
     if (confirmed == true) {
-      await _memberService.deleteMember(member.id!);
-      loadMembers();
+      await _controller.deleteMember(member.id!);
     }
-  }
-
-  Member _memberForDisplay(Member member) {
-    final user = AuthService.instance.currentUser;
-    if (user == null || member.id != user.memberId) return member;
-    return member.copyWith(
-      name: user.displayName,
-      colorHex: user.colorHex,
-      avatarType: user.avatarType,
-      avatarValue: user.avatarValue,
-      clearAvatarValue: user.avatarValue == null,
-    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Members')),
-      body: _members.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const HedgehogWidget(
-                      size: 60, activity: HedgehogActivity.waving),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No members yet. Add your household.',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.outline),
-                  ),
-                ],
-              ),
-            )
-          : ListView.separated(
-              padding: const EdgeInsets.all(16),
-              itemCount: _members.length,
-              separatorBuilder: (_, __) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final member = _members[index];
-                final displayMember = _memberForDisplay(member);
-                final choreCount = _choreCounts[member.id] ?? 0;
-                final isCurrentUser =
-                    member.id == AuthService.instance.currentUser?.memberId;
-                return Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                        color: Theme.of(context).colorScheme.outlineVariant,
-                        width: 1),
-                  ),
-                  child: Row(
-                    children: [
-                      MemberAvatar(member: displayMember, size: 44),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => Scaffold(
+        appBar: AppBar(title: const Text('Members')),
+        body: _controller.isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _controller.members.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const HedgehogWidget(
+                            size: 60, activity: HedgehogActivity.waving),
+                        const SizedBox(height: 16),
+                        Text(
+                          'No members yet. Add your household.',
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
+                              ?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline),
+                        ),
+                      ],
+                    ),
+                  )
+                : ListView.separated(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _controller.members.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final member = _controller.members[index];
+                      final displayMember =
+                          _controller.memberForDisplay(member);
+                      final choreCount =
+                          _controller.choreCounts[member.id] ?? 0;
+                      final isCurrentUser = member.id ==
+                          AuthService.instance.currentUser?.memberId;
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                              color:
+                                  Theme.of(context).colorScheme.outlineVariant,
+                              width: 1),
+                        ),
+                        child: Row(
                           children: [
-                            Text(
-                              displayMember.name,
-                              style: Theme.of(context).textTheme.titleMedium,
+                            MemberAvatar(member: displayMember, size: 44),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    displayMember.name,
+                                    style:
+                                        Theme.of(context).textTheme.titleMedium,
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    isCurrentUser
+                                        ? '${AuthService.instance.currentUser?.role == 'owner' ? 'Owner' : 'Member'} · $choreCount chore${choreCount == 1 ? '' : 's'} assigned'
+                                        : '$choreCount chore${choreCount == 1 ? '' : 's'} assigned',
+                                    style:
+                                        Theme.of(context).textTheme.bodyMedium,
+                                  ),
+                                ],
+                              ),
                             ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isCurrentUser
-                                  ? '${AuthService.instance.currentUser?.role == 'owner' ? 'Owner' : 'Member'} · $choreCount chore${choreCount == 1 ? '' : 's'} assigned'
-                                  : '$choreCount chore${choreCount == 1 ? '' : 's'} assigned',
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            ),
+                            if (!isCurrentUser)
+                              IconButton(
+                                onPressed: () => _deleteMember(member),
+                                icon: Icon(Icons.close,
+                                    color:
+                                        Theme.of(context).colorScheme.outline,
+                                    size: 20),
+                              ),
                           ],
                         ),
-                      ),
-                      if (!isCurrentUser)
-                        IconButton(
-                          onPressed: () => _deleteMember(member),
-                          icon: Icon(Icons.close,
-                              color: Theme.of(context).colorScheme.outline,
-                              size: 20),
-                        ),
-                    ],
+                      );
+                    },
                   ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddMemberSheet,
-        child: const Icon(Icons.person_add),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _showAddMemberSheet,
+          child: const Icon(Icons.person_add),
+        ),
       ),
     );
   }

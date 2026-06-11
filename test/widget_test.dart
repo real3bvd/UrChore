@@ -10,7 +10,9 @@ import 'package:urchore/data/web_memory_store.dart';
 import 'package:urchore/domain/auth_service.dart';
 import 'package:urchore/domain/chore_service.dart';
 import 'package:urchore/ui/controllers/chore_form_controller.dart';
+import 'package:urchore/ui/controllers/chores_controller.dart';
 import 'package:urchore/ui/controllers/home_controller.dart';
+import 'package:urchore/ui/controllers/members_controller.dart';
 import 'package:urchore/ui/screens/avatar_picker_screen.dart';
 import 'package:urchore/ui/screens/household_setup_screen.dart';
 import 'package:urchore/ui/screens/home_screen.dart';
@@ -199,6 +201,68 @@ void main() {
     expect(controller.unassignedChores.single.title, 'Available chore');
     expect(controller.findMember(1)?.name, 'bb');
     expect(controller.assignedChoreDays, contains(today.weekday));
+  });
+
+  test('Chores controller refreshes data and applies filters', () async {
+    final now = DateTime.now();
+    _seedHomeUser();
+    WebMemoryStore.chores.addAll([
+      Chore(
+        id: 1,
+        title: 'Pending chore',
+        assignedMemberId: 1,
+        isCompleted: false,
+        createdAt: now,
+        householdId: 1,
+      ),
+      Chore(
+        id: 2,
+        title: 'Finished chore',
+        assignedMemberId: 1,
+        isCompleted: true,
+        createdAt: now,
+        householdId: 1,
+      ),
+    ]);
+    final controller = ChoresController();
+    addTearDown(() {
+      controller.dispose();
+      _clearHomeData();
+    });
+
+    await controller.loadData();
+    expect(controller.filteredChores.single.title, 'Pending chore');
+
+    controller.selectFilter(2);
+    expect(controller.filteredChores.single.title, 'Finished chore');
+
+    controller.selectFilter(0);
+    expect(controller.filteredChores, hasLength(2));
+  });
+
+  test('Members controller refreshes member chore counts', () async {
+    final now = DateTime.now();
+    _seedHomeUser();
+    WebMemoryStore.chores.add(
+      Chore(
+        id: 1,
+        title: 'Assigned chore',
+        assignedMemberId: 1,
+        isCompleted: false,
+        createdAt: now,
+        householdId: 1,
+      ),
+    );
+    final controller = MembersController();
+    addTearDown(() {
+      controller.dispose();
+      _clearHomeData();
+    });
+
+    await controller.loadMembers();
+
+    expect(controller.members.single.name, 'bb');
+    expect(controller.choreCounts[1], 1);
   });
 
   test('Recurring completion avoids duplicates and supports undo', () async {

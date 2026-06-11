@@ -12,8 +12,13 @@ import 'chore_template_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   final VoidCallback? onNavigateToChores;
+  final HomeController? controller;
 
-  const HomeScreen({super.key, this.onNavigateToChores});
+  const HomeScreen({
+    super.key,
+    this.onNavigateToChores,
+    this.controller,
+  });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -21,16 +26,19 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   late final HomeController _controller;
+  late final bool _ownsController;
 
   @override
   void initState() {
     super.initState();
-    _controller = HomeController()..loadData();
+    _ownsController = widget.controller == null;
+    _controller = widget.controller ?? HomeController();
+    _controller.loadData();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    if (_ownsController) _controller.dispose();
     super.dispose();
   }
 

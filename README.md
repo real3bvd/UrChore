@@ -89,7 +89,7 @@ The UI does not access DAOs or SQLite directly.
 
 The app uses Flutter state tools intentionally:
 
-- `ChangeNotifier` controllers for Home and chore-form state
+- `ChangeNotifier` controllers for Home, Chores, Members, and chore-form state
 - `AnimatedBuilder` for controller-driven UI updates
 - `StatefulWidget` for screen lifecycle and local interactions
 - `ValueNotifier` and `ValueListenableBuilder` for theme changes
