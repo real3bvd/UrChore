@@ -135,6 +135,7 @@ class _AddEditChoreScreenState extends State<AddEditChoreScreen> {
       categoryId: _selectedCategoryId,
       priority: _selectedPriority,
       recurrence: _selectedRecurrence,
+      householdId: widget.chore?.householdId,
     );
 
     if (_isEditMode) {

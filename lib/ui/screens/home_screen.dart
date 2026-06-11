@@ -54,7 +54,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final assigned = chores
         .where(
-            (chore) => memberId != null && chore.assignedMemberId == memberId)
+          (chore) =>
+              memberId != null &&
+              chore.assignedMemberId == memberId &&
+              !chore.isCompleted,
+        )
         .toList()
       ..sort(_compareChores);
     final unassigned = chores
@@ -93,8 +97,26 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _toggleChore(Chore chore) async {
-    await _choreService.toggleComplete(chore);
+    final result = await _choreService.toggleComplete(chore);
     await _loadData();
+    if (!mounted || !result.completed) return;
+
+    final message = result.nextDueDate == null
+        ? '${chore.title} completed. Nice work!'
+        : '${chore.title} completed. Next: '
+            '${DateFormat('EEE, MMM d').format(result.nextDueDate!)}.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await _choreService.undoCompletion(chore, result);
+            await _loadData();
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _openEditChore(Chore chore) async {
@@ -222,8 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildAssignedChores() {
-    final pendingCount =
-        _assignedChores.where((chore) => !chore.isCompleted).length;
+    final pendingCount = _assignedChores.length;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

@@ -25,7 +25,7 @@ class ChoresScreenState extends State<ChoresScreen> {
   List<Chore> _allChores = [];
   List<Member> _members = [];
   Map<int, ChoreCategory> _categoryMap = {};
-  int _selectedFilter = 0; // 0=All, 1=Pending, 2=Done
+  int _selectedFilter = 1; // 0=All, 1=Pending, 2=Done
 
   @override
   void initState() {
@@ -73,8 +73,53 @@ class ChoresScreenState extends State<ChoresScreen> {
   }
 
   Future<void> _toggleChore(Chore chore) async {
-    await _choreService.toggleComplete(chore);
-    loadData();
+    final result = await _choreService.toggleComplete(chore);
+    await loadData();
+    if (!mounted) return;
+
+    if (!result.completed) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('${chore.title} moved back to Pending.')),
+      );
+      return;
+    }
+
+    final message = result.nextDueDate == null
+        ? '${chore.title} completed.'
+        : '${chore.title} completed. Next: '
+            '${_formatDate(result.nextDueDate!)}.';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        action: SnackBarAction(
+          label: 'Undo',
+          onPressed: () async {
+            await _choreService.undoCompletion(chore, result);
+            await loadData();
+          },
+        ),
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${weekdays[date.weekday - 1]}, '
+        '${months[date.month - 1]} ${date.day}';
   }
 
   Future<void> _openEditChore(Chore chore) async {

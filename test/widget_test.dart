@@ -8,6 +8,7 @@ import 'package:urchore/data/models/household.dart';
 import 'package:urchore/data/models/member.dart';
 import 'package:urchore/data/web_memory_store.dart';
 import 'package:urchore/domain/auth_service.dart';
+import 'package:urchore/domain/chore_service.dart';
 import 'package:urchore/ui/screens/avatar_picker_screen.dart';
 import 'package:urchore/ui/screens/household_setup_screen.dart';
 import 'package:urchore/ui/screens/home_screen.dart';
@@ -102,6 +103,134 @@ void main() {
     expect(chore.occursOn(DateTime(2026, 6, 11)), isTrue);
     expect(chore.occursOn(DateTime(2026, 6, 12)), isTrue);
     expect(chore.occursOn(DateTime(2026, 6, 17)), isTrue);
+  });
+
+  test('Recurring schedules calculate their next due date', () {
+    final base = DateTime(2026, 6, 11);
+
+    expect(
+      ChoreService.nextRecurrenceDate('daily', base),
+      DateTime(2026, 6, 12),
+    );
+    expect(
+      ChoreService.nextRecurrenceDate('weekly', base),
+      DateTime(2026, 6, 18),
+    );
+    expect(
+      ChoreService.nextRecurrenceDate('monthly', base),
+      DateTime(2026, 7, 11),
+    );
+    expect(ChoreService.nextRecurrenceDate('none', base), isNull);
+  });
+
+  test('Recurring completion avoids duplicates and supports undo', () async {
+    WebMemoryStore.persistenceEnabled = false;
+    addTearDown(() => WebMemoryStore.persistenceEnabled = true);
+    final today = DateTime.now();
+    final source = Chore(
+      id: 1,
+      title: 'Make the bed',
+      assignedMemberId: 1,
+      dueDate: today,
+      isCompleted: false,
+      createdAt: today,
+      recurrence: 'daily',
+      householdId: 1,
+    );
+    final existingNext = source.copyWith(
+      id: 2,
+      dueDate: today.add(const Duration(days: 1)),
+      createdAt: today.add(const Duration(minutes: 1)),
+    );
+    AuthService.instance.currentUser = AppUser(
+      id: 1,
+      email: 'bb@gmail.com',
+      passwordHash: 'hash',
+      displayName: 'bb',
+      householdId: 1,
+      memberId: 1,
+      createdAt: today,
+    );
+    WebMemoryStore.chores
+      ..clear()
+      ..addAll([source, existingNext]);
+    addTearDown(_clearHomeData);
+
+    final service = ChoreService();
+    final result = await service.toggleComplete(source);
+
+    expect(result.completed, isTrue);
+    expect(result.createdNextChoreId, isNull);
+    expect(
+      WebMemoryStore.chores
+          .where((chore) => !chore.isCompleted && chore.title == source.title),
+      hasLength(1),
+    );
+
+    final undoSource = source.copyWith(
+      id: 10,
+      title: 'Wash dishes',
+    );
+    WebMemoryStore.chores
+      ..clear()
+      ..add(undoSource);
+    final undoResult = await service.toggleComplete(undoSource);
+
+    expect(undoResult.createdNextChoreId, isNotNull);
+    expect(WebMemoryStore.chores, hasLength(2));
+
+    await service.undoCompletion(undoSource, undoResult);
+
+    expect(WebMemoryStore.chores, hasLength(1));
+    expect(
+      WebMemoryStore.chores
+          .firstWhere((chore) => chore.id == undoSource.id)
+          .isCompleted,
+      isFalse,
+    );
+  });
+
+  test('Editing a chore keeps it inside the signed-in household', () async {
+    WebMemoryStore.persistenceEnabled = false;
+    addTearDown(() => WebMemoryStore.persistenceEnabled = true);
+    final now = DateTime.now();
+    AuthService.instance.currentUser = AppUser(
+      id: 1,
+      email: 'bb@gmail.com',
+      passwordHash: 'hash',
+      displayName: 'bb',
+      householdId: 1,
+      memberId: 1,
+      createdAt: now,
+    );
+    WebMemoryStore.chores
+      ..clear()
+      ..add(
+        Chore(
+          id: 1,
+          title: 'Old title',
+          assignedMemberId: 1,
+          isCompleted: false,
+          createdAt: now,
+          householdId: 1,
+        ),
+      );
+    addTearDown(_clearHomeData);
+
+    await ChoreService().updateChore(
+      Chore(
+        id: 1,
+        title: 'Updated title',
+        assignedMemberId: 1,
+        isCompleted: false,
+        createdAt: now,
+      ),
+    );
+
+    final saved = WebMemoryStore.chores.single;
+    expect(saved.title, 'Updated title');
+    expect(saved.householdId, 1);
+    expect(await ChoreService().getAllChores(), hasLength(1));
   });
 
   test('Invite codes are normalized when pasted', () {
@@ -234,6 +363,43 @@ void main() {
       final key = 'chore-dot-${DateFormat('yyyy-MM-dd').format(date)}';
       expect(find.byKey(ValueKey(key)), findsOneWidget);
     }
+  });
+
+  testWidgets('Home hides completed history and shows only active chores',
+      (tester) async {
+    final now = DateTime.now();
+    _seedHomeUser();
+    WebMemoryStore.chores.addAll([
+      Chore(
+        id: 1,
+        title: 'Make the bed',
+        assignedMemberId: 1,
+        dueDate: now,
+        isCompleted: true,
+        createdAt: now.subtract(const Duration(days: 1)),
+        recurrence: 'daily',
+        householdId: 1,
+      ),
+      Chore(
+        id: 2,
+        title: 'Make the bed',
+        assignedMemberId: 1,
+        dueDate: now.add(const Duration(days: 1)),
+        isCompleted: false,
+        createdAt: now,
+        recurrence: 'daily',
+        householdId: 1,
+      ),
+    ]);
+    addTearDown(_clearHomeData);
+
+    await tester.pumpWidget(
+      const MaterialApp(home: HomeScreen()),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Make the bed'), findsOneWidget);
+    expect(find.text('1 still to do'), findsOneWidget);
   });
 
   testWidgets('Members uses the signed-in user avatar for their row',

@@ -2,6 +2,25 @@ import '../data/repository/chore_repository.dart';
 import '../data/models/chore.dart';
 import 'auth_service.dart';
 
+class ChoreToggleResult {
+  final bool completed;
+  final DateTime? nextDueDate;
+  final int? createdNextChoreId;
+
+  const ChoreToggleResult({
+    required this.completed,
+    this.nextDueDate,
+    this.createdNextChoreId,
+  });
+}
+
+class _NextRecurrenceResult {
+  final DateTime dueDate;
+  final int? createdChoreId;
+
+  const _NextRecurrenceResult(this.dueDate, this.createdChoreId);
+}
+
 /// Service class that encapsulates business logic related to chores.
 /// Acts as an intermediary between the UI layer and the data layer,
 /// ensuring that business rules are applied consistently.
@@ -64,25 +83,47 @@ class ChoreService {
 
   /// Updates an existing chore.
   Future<int> updateChore(Chore chore) async {
-    return await _choreRepo.updateChore(chore);
+    return await _choreRepo.updateChore(
+      chore.copyWith(
+        householdId:
+            chore.householdId ?? AuthService.instance.currentUser?.householdId,
+      ),
+    );
   }
 
   /// Business logic: toggles chore completion status.
   /// When completing a recurring chore, automatically creates
   /// the next occurrence with an updated due date.
-  Future<int> toggleComplete(Chore chore) async {
+  Future<ChoreToggleResult> toggleComplete(Chore chore) async {
     if (chore.isCompleted) {
-      return await _choreRepo.markPending(chore.id!);
-    } else {
-      final result = await _choreRepo.markComplete(chore.id!);
-
-      // If the chore is recurring, auto-create the next instance
-      if (chore.recurrence != 'none') {
-        await _createNextRecurrence(chore);
-      }
-
-      return result;
+      await _choreRepo.markPending(chore.id!);
+      return const ChoreToggleResult(completed: false);
     }
+
+    await _choreRepo.markComplete(chore.id!);
+
+    if (chore.recurrence == 'none') {
+      return const ChoreToggleResult(completed: true);
+    }
+
+    final next = await _createNextRecurrence(chore);
+    return ChoreToggleResult(
+      completed: true,
+      nextDueDate: next?.dueDate,
+      createdNextChoreId: next?.createdChoreId,
+    );
+  }
+
+  Future<void> undoCompletion(
+    Chore chore,
+    ChoreToggleResult result,
+  ) async {
+    if (!result.completed || chore.id == null) return;
+
+    if (result.createdNextChoreId != null) {
+      await _choreRepo.deleteChore(result.createdNextChoreId!);
+    }
+    await _choreRepo.markPending(chore.id!);
   }
 
   /// Deletes a single chore by its ID.
@@ -118,46 +159,36 @@ class ChoreService {
   /// Creates the next instance of a recurring chore when it is completed.
   /// The new chore has the same title, description, category, priority,
   /// recurrence, and assignee — but with a future due date and isCompleted=false.
-  Future<void> _createNextRecurrence(Chore chore) async {
+  Future<_NextRecurrenceResult?> _createNextRecurrence(Chore chore) async {
     final baseDate = chore.dueDate ?? DateTime.now();
-    DateTime nextDueDate;
+    final firstNextDueDate = nextRecurrenceDate(chore.recurrence, baseDate);
+    if (firstNextDueDate == null) return null;
+    DateTime nextDueDate = firstNextDueDate;
 
-    switch (chore.recurrence) {
-      case 'daily':
-        nextDueDate = baseDate.add(const Duration(days: 1));
-        break;
-      case 'weekly':
-        nextDueDate = baseDate.add(const Duration(days: 7));
-        break;
-      case 'monthly':
-        nextDueDate = DateTime(
-          baseDate.year,
-          baseDate.month + 1,
-          baseDate.day,
-        );
-        break;
-      default:
-        return;
-    }
-
-    // Ensure the next due date is in the future
     final now = DateTime.now();
     while (nextDueDate.isBefore(now)) {
-      switch (chore.recurrence) {
-        case 'daily':
-          nextDueDate = nextDueDate.add(const Duration(days: 1));
-          break;
-        case 'weekly':
-          nextDueDate = nextDueDate.add(const Duration(days: 7));
-          break;
-        case 'monthly':
-          nextDueDate = DateTime(
-            nextDueDate.year,
-            nextDueDate.month + 1,
-            nextDueDate.day,
-          );
-          break;
-      }
+      nextDueDate = nextRecurrenceDate(
+        chore.recurrence,
+        nextDueDate,
+      )!;
+    }
+
+    final chores = await getAllChores();
+    final alreadyExists = chores.any(
+      (candidate) =>
+          candidate.id != chore.id &&
+          !candidate.isCompleted &&
+          candidate.title == chore.title &&
+          candidate.description == chore.description &&
+          candidate.assignedMemberId == chore.assignedMemberId &&
+          candidate.categoryId == chore.categoryId &&
+          candidate.priority == chore.priority &&
+          candidate.recurrence == chore.recurrence &&
+          candidate.householdId == chore.householdId &&
+          _sameDay(candidate.dueDate, nextDueDate),
+    );
+    if (alreadyExists) {
+      return _NextRecurrenceResult(nextDueDate, null);
     }
 
     final nextChore = Chore(
@@ -173,6 +204,34 @@ class ChoreService {
       householdId: chore.householdId,
     );
 
-    await _choreRepo.addChore(nextChore);
+    final createdId = await _choreRepo.addChore(nextChore);
+    return _NextRecurrenceResult(nextDueDate, createdId);
+  }
+
+  static DateTime? nextRecurrenceDate(
+    String recurrence,
+    DateTime baseDate,
+  ) {
+    switch (recurrence) {
+      case 'daily':
+        return baseDate.add(const Duration(days: 1));
+      case 'weekly':
+        return baseDate.add(const Duration(days: 7));
+      case 'monthly':
+        return DateTime(
+          baseDate.year,
+          baseDate.month + 1,
+          baseDate.day,
+        );
+      default:
+        return null;
+    }
+  }
+
+  static bool _sameDay(DateTime? first, DateTime second) {
+    return first != null &&
+        first.year == second.year &&
+        first.month == second.month &&
+        first.day == second.day;
   }
 }
