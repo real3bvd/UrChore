@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'models/app_user.dart';
@@ -13,7 +12,6 @@ class WebMemoryStore {
   static const _storageKey = 'urchore_web_store_v1';
   static final SharedPreferencesAsync _preferences = SharedPreferencesAsync();
 
-  @visibleForTesting
   static bool persistenceEnabled = true;
 
   static int _nextMemberId = 1;

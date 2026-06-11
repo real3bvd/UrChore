@@ -4,6 +4,7 @@ import '../../data/models/chore.dart';
 import '../../data/models/member.dart';
 import '../../data/models/chore_category.dart';
 import '../theme/app_theme.dart';
+import '../theme/model_styles.dart';
 
 class ChoreCard extends StatelessWidget {
   final Chore chore;

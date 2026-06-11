@@ -9,6 +9,8 @@ import 'package:urchore/data/models/member.dart';
 import 'package:urchore/data/web_memory_store.dart';
 import 'package:urchore/domain/auth_service.dart';
 import 'package:urchore/domain/chore_service.dart';
+import 'package:urchore/ui/controllers/chore_form_controller.dart';
+import 'package:urchore/ui/controllers/home_controller.dart';
 import 'package:urchore/ui/screens/avatar_picker_screen.dart';
 import 'package:urchore/ui/screens/household_setup_screen.dart';
 import 'package:urchore/ui/screens/home_screen.dart';
@@ -122,6 +124,81 @@ void main() {
       DateTime(2026, 7, 11),
     );
     expect(ChoreService.nextRecurrenceDate('none', base), isNull);
+  });
+
+  test('Chore form controller preserves edit identity and selections', () {
+    final createdAt = DateTime(2026, 6, 10);
+    final original = Chore(
+      id: 12,
+      title: 'Old title',
+      assignedMemberId: 2,
+      dueDate: DateTime(2026, 6, 12),
+      isCompleted: true,
+      createdAt: createdAt,
+      categoryId: 1,
+      priority: 'low',
+      recurrence: 'weekly',
+      householdId: 4,
+    );
+    final controller = ChoreFormController(originalChore: original);
+    addTearDown(controller.dispose);
+
+    controller.titleController.text = 'Updated title';
+    controller.selectMember(7);
+    controller.selectCategory(3);
+    controller.selectPriority('high');
+    controller.selectRecurrence('monthly');
+    controller.selectDueDate(DateTime(2026, 7, 1));
+
+    final updated = controller.buildChore();
+
+    expect(updated.id, 12);
+    expect(updated.title, 'Updated title');
+    expect(updated.assignedMemberId, 7);
+    expect(updated.categoryId, 3);
+    expect(updated.priority, 'high');
+    expect(updated.recurrence, 'monthly');
+    expect(updated.isCompleted, isTrue);
+    expect(updated.createdAt, createdAt);
+    expect(updated.householdId, 4);
+  });
+
+  test('Home controller derives member and calendar state', () async {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    _seedHomeUser();
+    WebMemoryStore.chores.addAll([
+      Chore(
+        id: 1,
+        title: 'Daily assigned chore',
+        assignedMemberId: 1,
+        dueDate: today,
+        isCompleted: false,
+        createdAt: today,
+        recurrence: 'daily',
+        householdId: 1,
+      ),
+      Chore(
+        id: 2,
+        title: 'Available chore',
+        dueDate: today,
+        isCompleted: false,
+        createdAt: today,
+        householdId: 1,
+      ),
+    ]);
+    final controller = HomeController();
+    addTearDown(() {
+      controller.dispose();
+      _clearHomeData();
+    });
+
+    await controller.loadData();
+
+    expect(controller.assignedChores.single.title, 'Daily assigned chore');
+    expect(controller.unassignedChores.single.title, 'Available chore');
+    expect(controller.findMember(1)?.name, 'bb');
+    expect(controller.assignedChoreDays, contains(today.weekday));
   });
 
   test('Recurring completion avoids duplicates and supports undo', () async {

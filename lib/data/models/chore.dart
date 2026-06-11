@@ -1,6 +1,3 @@
-import 'package:flutter/material.dart';
-import '../../ui/theme/app_theme.dart';
-
 class Chore {
   final int? id;
   final String title;
@@ -61,19 +58,6 @@ class Chore {
     return first.year == second.year &&
         first.month == second.month &&
         first.day == second.day;
-  }
-
-  Color get priorityColor {
-    switch (priority) {
-      case 'high':
-        return AppColors.overdue;
-      case 'medium':
-        return AppColors.pending;
-      case 'low':
-        return AppColors.done;
-      default:
-        return AppColors.textLight;
-    }
   }
 
   Chore copyWith({

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/chore_category.dart';
 import '../../data/chore_templates.dart';
 import '../../domain/category_service.dart';
+import '../theme/model_styles.dart';
 import 'add_edit_chore_screen.dart';
 import 'chore_template_category_screen.dart';
 

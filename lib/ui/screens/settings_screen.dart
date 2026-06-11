@@ -6,7 +6,7 @@ import '../widgets/profile_avatar.dart';
 import '../../domain/chore_service.dart';
 import '../../domain/member_service.dart';
 import '../../domain/auth_service.dart';
-import '../../domain/theme_service.dart';
+import '../theme/theme_service.dart';
 import 'edit_profile_screen.dart';
 
 class SettingsScreen extends StatefulWidget {

@@ -10,7 +10,7 @@ import 'ui/screens/household_setup_screen.dart';
 import 'ui/screens/welcome_screen.dart';
 import 'ui/widgets/hedgehog_painter.dart';
 import 'domain/auth_service.dart';
-import 'domain/theme_service.dart';
+import 'ui/theme/theme_service.dart';
 
 // Conditional import: picks the right DB init for web vs native
 import 'data/database/db_init_stub.dart'

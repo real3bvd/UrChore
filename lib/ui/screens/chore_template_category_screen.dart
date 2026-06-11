@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/chore_category.dart';
 import '../../data/chore_templates.dart';
+import '../theme/model_styles.dart';
 import 'add_edit_chore_screen.dart';
 
 class ChoreTemplateCategoryScreen extends StatefulWidget {
