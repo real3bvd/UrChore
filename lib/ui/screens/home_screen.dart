@@ -11,6 +11,7 @@ import '../../domain/member_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/chore_card.dart';
 import '../widgets/hedgehog_painter.dart';
+import '../widgets/app_notification.dart';
 import 'add_edit_chore_screen.dart';
 import 'chore_template_screen.dart';
 
@@ -105,17 +106,14 @@ class _HomeScreenState extends State<HomeScreen> {
         ? '${chore.title} completed. Nice work!'
         : '${chore.title} completed. Next: '
             '${DateFormat('EEE, MMM d').format(result.nextDueDate!)}.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () async {
-            await _choreService.undoCompletion(chore, result);
-            await _loadData();
-          },
-        ),
-      ),
+    showAppNotification(
+      context,
+      message,
+      actionLabel: 'Undo',
+      onAction: () async {
+        await _choreService.undoCompletion(chore, result);
+        await _loadData();
+      },
     );
   }
 
@@ -161,8 +159,9 @@ class _HomeScreenState extends State<HomeScreen> {
     );
     await _loadData();
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${chore.title} is now assigned to you.')),
+    showAppNotification(
+      context,
+      '${chore.title} is now assigned to you.',
     );
   }
 

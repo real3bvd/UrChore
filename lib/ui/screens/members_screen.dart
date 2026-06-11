@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../widgets/hedgehog_painter.dart';
 import '../widgets/member_avatar.dart';
+import '../widgets/app_notification.dart';
 import '../../data/models/member.dart';
 import '../../domain/member_service.dart';
 import '../../domain/auth_service.dart';
@@ -154,12 +155,9 @@ class MembersScreenState extends State<MembersScreen> {
                                 } catch (error) {
                                   if (!context.mounted) return;
                                   setSheetState(() => isSaving = false);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Could not add member: $error',
-                                      ),
-                                    ),
+                                  showAppNotification(
+                                    context,
+                                    'Could not add member: $error',
                                   );
                                 }
                               },

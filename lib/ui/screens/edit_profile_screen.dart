@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/avatar_choice.dart';
 import '../../domain/auth_service.dart';
+import '../widgets/app_notification.dart';
 import '../widgets/profile_avatar.dart';
 import 'avatar_picker_screen.dart';
 
@@ -53,9 +54,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   Future<void> _save() async {
     final name = _nameController.text.trim();
     if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Enter a display name.')),
-      );
+      showAppNotification(context, 'Enter a display name.');
       return;
     }
     setState(() => _isSaving = true);
@@ -67,9 +66,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       if (mounted) Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      showAppNotification(
+        context,
+        error.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/models/household.dart';
 import '../../domain/auth_service.dart';
+import '../widgets/app_notification.dart';
 import '../widgets/profile_avatar.dart';
 
 class HouseholdSetupScreen extends StatefulWidget {
@@ -116,8 +117,7 @@ class _HouseholdSetupScreenState extends State<HouseholdSetupScreen> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    showAppNotification(context, message);
   }
 
   @override

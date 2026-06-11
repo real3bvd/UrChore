@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/chore_card.dart';
 import '../widgets/hedgehog_painter.dart';
+import '../widgets/app_notification.dart';
 import '../../data/models/chore.dart';
 import '../../data/models/member.dart';
 import '../../data/models/chore_category.dart';
@@ -78,8 +79,9 @@ class ChoresScreenState extends State<ChoresScreen> {
     if (!mounted) return;
 
     if (!result.completed) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${chore.title} moved back to Pending.')),
+      showAppNotification(
+        context,
+        '${chore.title} moved back to Pending.',
       );
       return;
     }
@@ -88,17 +90,14 @@ class ChoresScreenState extends State<ChoresScreen> {
         ? '${chore.title} completed.'
         : '${chore.title} completed. Next: '
             '${_formatDate(result.nextDueDate!)}.';
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        action: SnackBarAction(
-          label: 'Undo',
-          onPressed: () async {
-            await _choreService.undoCompletion(chore, result);
-            await loadData();
-          },
-        ),
-      ),
+    showAppNotification(
+      context,
+      message,
+      actionLabel: 'Undo',
+      onAction: () async {
+        await _choreService.undoCompletion(chore, result);
+        await loadData();
+      },
     );
   }
 

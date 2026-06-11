@@ -236,12 +236,21 @@ class AppTheme {
       snackBarTheme: SnackBarThemeData(
         backgroundColor:
             brightness == Brightness.dark ? const Color(0xFFF0EAE2) : text,
+        actionTextColor: primary,
         contentTextStyle: GoogleFonts.dmSans(
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
           color: brightness == Brightness.dark
               ? const Color(0xFF25221F)
               : Colors.white,
         ),
         behavior: SnackBarBehavior.floating,
+        elevation: 3,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+        actionOverflowThreshold: 0.35,
       ),
     );
   }

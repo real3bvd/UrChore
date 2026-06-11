@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../data/models/avatar_choice.dart';
 import '../../data/profile_avatar_options.dart';
+import '../widgets/app_notification.dart';
 import '../widgets/profile_avatar.dart';
 
 class AvatarPickerScreen extends StatefulWidget {
@@ -53,9 +54,7 @@ class _AvatarPickerScreenState extends State<AvatarPickerScreen> {
       });
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Could not open photos: $error')),
-      );
+      showAppNotification(context, 'Could not open photos: $error');
     } finally {
       if (mounted) setState(() => _isPickingPhoto = false);
     }

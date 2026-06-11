@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../domain/auth_service.dart';
+import '../widgets/app_notification.dart';
 
 class SignInScreen extends StatefulWidget {
   final VoidCallback onSignedIn;
@@ -38,9 +39,9 @@ class _SignInScreenState extends State<SignInScreen> {
       Navigator.pop(context, true);
     } catch (error) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-            content: Text(error.toString().replaceFirst('Exception: ', ''))),
+      showAppNotification(
+        context,
+        error.toString().replaceFirst('Exception: ', ''),
       );
     } finally {
       if (mounted) setState(() => _isSaving = false);

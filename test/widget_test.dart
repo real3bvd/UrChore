@@ -13,6 +13,7 @@ import 'package:urchore/ui/screens/avatar_picker_screen.dart';
 import 'package:urchore/ui/screens/household_setup_screen.dart';
 import 'package:urchore/ui/screens/home_screen.dart';
 import 'package:urchore/ui/screens/members_screen.dart';
+import 'package:urchore/ui/widgets/app_notification.dart';
 import 'package:urchore/ui/widgets/profile_avatar.dart';
 
 void main() {
@@ -437,6 +438,41 @@ void main() {
 
     expect(find.byType(Image), findsOneWidget);
     expect(find.byIcon(Icons.person), findsNothing);
+  });
+
+  testWidgets('Undo notifications dismiss automatically', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: Builder(
+            builder: (context) => TextButton(
+              onPressed: () {
+                showAppNotification(
+                  context,
+                  'Chore completed.',
+                  actionLabel: 'Undo',
+                  onAction: () {},
+                );
+              },
+              child: const Text('Show'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Show'));
+    await tester.pumpAndSettle();
+
+    final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+    expect(snackBar.persist, isFalse);
+    expect(snackBar.duration, const Duration(seconds: 3));
+    expect(find.text('Undo'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(SnackBar), findsNothing);
   });
 }
 

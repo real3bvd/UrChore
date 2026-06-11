@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../theme/app_theme.dart';
+import '../widgets/app_notification.dart';
 import '../widgets/profile_avatar.dart';
 import '../../domain/chore_service.dart';
 import '../../domain/member_service.dart';
@@ -34,9 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (code == null) return;
     await Clipboard.setData(ClipboardData(text: code));
     if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Invite code copied.')),
-      );
+      showAppNotification(context, 'Invite code copied.');
     }
   }
 
@@ -54,9 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (confirmed == true) {
       await _choreService.deleteAllChores();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All chores have been reset.')),
-        );
+        showAppNotification(context, 'All chores have been reset.');
       }
     }
   }
@@ -72,9 +69,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       await _choreService.deleteAllChores();
       await _memberService.deleteAllMembers();
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('All data has been reset.')),
-        );
+        showAppNotification(context, 'All data has been reset.');
       }
     }
   }
